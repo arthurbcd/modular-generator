@@ -1,0 +1,62 @@
+{
+  "name": "modular-generator",
+  "displayName": "Modular Generator",
+  "description": "Generate folders and files easily for your Flutter Modular project",
+  "publisher": "ArthurMiranda",
+  "version": "0.1.0",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.65.0"
+  },
+  "bugs": {
+    "url": "https://github.com/arthurbcd/modular-generator/issues",
+    "email": "ux.arthur@gmail.com"
+  },
+  "icon": "assets/logo.png",
+  "categories": [
+    "Snippets",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "dart",
+    "flutter",
+    "modular",
+    "folder",
+    "generator"
+  ],
+  "activationEvents": [
+    "onCommand:modular-generator.addPage"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "modular-generator.addPage",
+        "title": "[Flutter Modular]: Generate Module"
+      }
+    ]
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "pretest": "npm run lint",
+    "test": "node ./test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/glob": "^7.2.0",
+    "@types/mocha": "^9.1.0",
+    "@types/node": "14.x",
+    "@types/vscode": "^1.65.0",
+    "@vscode/test-electron": "^2.1.2",
+    "eslint": "^8.40.0",
+    "glob": "^7.2.0",
+    "mocha": "^9.2.1",
+    "typescript": "^4.5.5"
+  },
+  "dependencies": {
+    "replace-in-file": "^6.3.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/arthurbcd/modular-generator.git"
+  }
+}
