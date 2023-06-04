@@ -6,7 +6,7 @@ const utils = require('./utils.js')
 const install = require('./install.js');
 
 
-async function addModule() {
+async function addPage() {
     var pubspecPath = await utils.getPubspecPath()
 
     if (typeof pubspecPath === 'string' && pubspecPath.length > 0) {
@@ -63,11 +63,11 @@ async function moveFile(path, projectName, pageName) {
             function (w) { return w[0].toUpperCase() + w.slice(1).toLowerCase(); })
         .replace(/\s/g, '')
 
-    // var routeName = className.charAt(0).toLowerCase() + className.substring(1)
-    // var routeNameCmt = fileName
-    //     .replace(/_/g, ' ')
-    //     .replace(/\w+/g,
-    //         function (w) { return w[0].toUpperCase() + w.slice(1).toLowerCase(); })
+    var routeName = className.charAt(0).toLowerCase() + className.substring(1)
+    var routeNameCmt = fileName
+        .replace(/_/g, ' ')
+        .replace(/\w+/g,
+            function (w) { return w[0].toUpperCase() + w.slice(1).toLowerCase(); })
 
     await vscode.workspace.fs.copy(
         vscode.Uri.parse(`${extension.extensionPath}/pattern/template/app/modules/template/data/template_repository.dart`),
@@ -127,8 +127,26 @@ async function moveFile(path, projectName, pageName) {
         countMatches: true,
     });
 
+    // App Routes Modify
+    let appRoutesPath = `${path}lib/app/app_routes.dart`
+    var appRoutesData = fs.readFileSync(appRoutesPath, 'utf-8')
+    var appRoutesLines = appRoutesData.split('\n')
 
-    // App Pages Modify
+    var index = 0
+    for (let i = 0; i < appRoutesLines.length; i++) {
+        const element = appRoutesLines[i];
+        if (element.includes('}')) {
+            index = i
+        }
+    }
+
+    appRoutesLines.splice(index, 0,
+        `  static const ${routeName} = '/${routeName}';`
+    )
+    fs.writeFileSync(appRoutesPath, appRoutesLines.join('\n'), 'utf-8')
+
+
+    // // App Pages Modify
     // let appPagesPath = `${path}lib/app/routes/app_pages.dart`
     // var appPagesData = fs.readFileSync(appPagesPath, 'utf-8')
     // var appPagesLines = appPagesData.split('\n')
@@ -151,7 +169,7 @@ async function moveFile(path, projectName, pageName) {
     // )
     // fs.writeFileSync(appPagesPath, appPagesLines.join('\n'), 'utf-8')
 
-    // App Routes Modify
+    // // App Routes Modify
     // let appRoutesPath = `${path}lib/app/routes/app_routes.dart`
     // var appRoutesData = fs.readFileSync(appRoutesPath, 'utf-8')
     // var appRoutesLines = appRoutesData.split('\n')

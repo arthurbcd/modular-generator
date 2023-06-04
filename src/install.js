@@ -35,11 +35,7 @@ async function install() {
                     index = i
                 }
             }
-            lines.splice(index - 1, 0, "  google_fonts: 2.2.0")
-            lines.splice(index - 1, 0, "  flutter_datetime_picker: 1.5.0")
-            lines.splice(index - 1, 0, "  responsive_framework: 0.1.6")
-            lines.splice(index - 1, 0, "  flutter_spinkit: 5.0.0")
-            lines.splice(index - 1, 0, "  get: 4.6.0")
+            lines.splice(index - 1, 0, "  flutter_modular: 2.2.0")
             fs.writeFileSync(pubspecPath, lines.join('\n'), 'utf-8')
             data = lines.join('\n')
 
