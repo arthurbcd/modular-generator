@@ -3,7 +3,7 @@
   "displayName": "Modular Generator",
   "description": "Generate folders and files easily for your Flutter Modular project",
   "publisher": "ArthurMiranda",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "license": "MIT",
   "engines": {
     "vscode": "^1.65.0"
@@ -31,8 +31,16 @@
   "contributes": {
     "commands": [
       {
-        "command": "modular-generator.addPage",
-        "title": "[Flutter Modular]: Generate Module"
+        "command": "modular-generator.install",
+        "title": "[Modular Generator]: Install Modular"
+      },
+      {
+        "command": "modular-generator.addModule",
+        "title": "[Modular Generator]: Add Module"
+      },
+      {
+        "command": "modular-generator.updateModule",
+        "title": "[Modular Generator]: Update Module"
       }
     ]
   },

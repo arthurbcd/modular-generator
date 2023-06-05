@@ -4,49 +4,71 @@ const replace = require('replace-in-file')
 const fs = require('fs')
 const utils = require('./utils.js')
 const install = require('./install.js');
+const path = require('path');
 
+module.exports = {
+    addModule: addModule,
+    updateModule: updateModule
+}
 
-async function addModule() {
-    var pubspecPath = await utils.getPubspecPath()
+async function getModules() {
+    var [pubspecPath] = await utils.getPubspecPath();
+    let path = pubspecPath.replace("pubspec.yaml", "")
+
+    const modulePaths = `${path}lib/app/modules/`;
+
+    const moduleDirectories = fs.readdirSync(modulePaths, { withFileTypes: true })
+        .filter(dirent => dirent.isDirectory());
+
+    const modules = moduleDirectories.map(dirent => ({
+        name: dirent.name,
+        path: modulePaths + dirent.name
+    }));
+
+    return modules;
+}
+
+function validateInput(input) {
+    let regex = /^[a-zA-Z\s_]*$/;
+
+    if (!regex.test(input) || input.length === 0) {
+        vscode.window.showInformationMessage(`Invalid name: ${input} 😵‍💫`)
+        return false;
+    }
+    return true;
+}
+
+async function updateModule() {
+
+    const modules = await getModules();
+    const moduleNames = modules.map(module => module.name);
+
+    const moduleName = await vscode.window.showQuickPick(moduleNames, {
+        placeHolder: 'Which Module do you want to update?',
+    });
+
+    if (!validateInput(moduleName)) return;
+
+    await addModule(moduleName);
+
+}
+
+async function addModule(maybeModuleName) {
+    var [pubspecPath] = await utils.getPubspecPath()
 
     if (typeof pubspecPath === 'string' && pubspecPath.length > 0) {
 
-        let path = pubspecPath.replace("pubspec.yaml", "")
-        var data = fs.readFileSync(pubspecPath, 'utf-8')
-        var lines = data.split('\n')
-        var projectName = lines[0].replace("name: ", "")
-
-        async function createModule() {
-            await moveFile(path, projectName, null, moduleName, 'module')
-        }
-        async function createView(pageName) {
-            await moveFile(path, projectName, moduleName, pageName, 'view')
-        }
-        async function createService(serviceName) {
-            await moveFile(path, projectName, moduleName, serviceName, 'service')
-        }
-        async function createRepository(repositoryName) {
-            await moveFile(path, projectName, moduleName, repositoryName, 'repository')
-        }
-
-        function validateInput(input) {
-            let regex = /^[a-zA-Z\s_]*$/;
-
-            if (!regex.test(input) || input.length === 0) {
-                vscode.window.showInformationMessage(`Invalid name: ${input} 🫠`)
-                return false;
-            }
-            return true;
-        }
-
-        const moduleName = await vscode.window.showInputBox({
+        /// * Pick the module
+        const moduleName = maybeModuleName ?? await vscode.window.showInputBox({
             placeHolder: "e.g module name or module_name or ModuleName",
             prompt: "Add a valid Module name.",
         });
 
         if (!validateInput(moduleName)) return;
-        await createModule();
 
+        await moveFile(null, moduleName, 'module');
+
+        /// * Generate the pages
         const pageNamesInput = await vscode.window.showInputBox({
             placeHolder: "e.g login, register, ... (leave empty to skip)",
             prompt: "Pages to add. If the Module and Page names are equal, the route will be '/', otherwise '/page_name'.",
@@ -57,10 +79,11 @@ async function addModule() {
 
             for (const pageName of pageNames) {
                 if (!validateInput(pageName)) continue;
-                await createView(pageName);
+                await moveFile(moduleName, pageName, 'view');
             }
         }
 
+        /// * Generate the services
         const serviceNamesInput = await vscode.window.showInputBox({
             placeHolder: "e.g server auth, google auth, ... (leave empty to skip)",
             prompt: "Services to add. Please, separate by commas.",
@@ -71,10 +94,11 @@ async function addModule() {
 
             for (const serviceName of serviceNames) {
                 if (!validateInput(serviceName)) continue;
-                await createService(serviceName);
+                await moveFile(moduleName, serviceName, 'service');
             }
         }
 
+        /// * Generate the repositories
         const repositoryNamesInput = await vscode.window.showInputBox({
             placeHolder: "e.g server auth, ... (leave empty to skip)",
             prompt: "Repositories to add. Please, separate by commas.",
@@ -85,11 +109,11 @@ async function addModule() {
 
             for (const repositoryName of repositoryNames) {
                 if (!validateInput(repositoryName)) continue;
-                await createRepository(repositoryName);
+                await moveFile(moduleName, repositoryName, 'repository');
             }
         }
 
-        vscode.window.showInformationMessage('Module Generated! "Ihuuu!" ✌🏽😌✌🏽')
+        vscode.window.showInformationMessage('Module Generated 🔥')
 
     }
 }
@@ -100,7 +124,7 @@ async function addModule() {
  * @param {string} typeName
  * @param {string} type
  */
-async function moveFile(path, projectName, moduleName, typeName, type) {
+async function moveFile(moduleName, typeName, type) {
     let extension
     vscode.extensions.all.forEach((e) => {
         if (e.id.includes("modular-generator")) {
@@ -111,6 +135,12 @@ async function moveFile(path, projectName, moduleName, typeName, type) {
     if (extension == null) {
         return
     }
+    var [pubspecPath] = await utils.getPubspecPath();
+
+    let path = pubspecPath.replace("pubspec.yaml", "")
+    var data = fs.readFileSync(pubspecPath, 'utf-8')
+    var lines = data.split('\n')
+    var projectName = lines[0].replace("name: ", "")
 
     var fileName = typeName
         .replace(/_/g, ' ')
@@ -182,44 +212,52 @@ async function moveFile(path, projectName, moduleName, typeName, type) {
     /// Add imports, binds and routes as module templates
     modifyModule(modulePath, fileName, type);
 
-    replace.sync({
-        files,
-        from: /modular_generator/g,
-        to: projectName,
-        countMatches: true,
-    });
+    // const pageSuffix = vscode.workspace.getConfiguration().get('modular-generator.pageSuffix');
+    // const controllerSuffix = vscode.workspace.getConfiguration().get('modular-generator.controllerSuffix');
+    // const viewFolder = vscode.workspace.getConfiguration().get('modular-generator.viewFolder');
+    // const serviceSuffix = vscode.workspace.getConfiguration().get('modular-generator.serviceSuffix');
+    // const serviceFolder = vscode.workspace.getConfiguration().get('modular-generator.serviceFolder');
+    // const repositorySuffix = vscode.workspace.getConfiguration().get('modular-generator.repositorySuffix');
+    // const repositoryFolder = vscode.workspace.getConfiguration().get('modular-generator.repositoryFolder');
+
+    const replacements = [
+        { from: /modular_generator/g, to: projectName },
+        { from: /Template/g, to: className },
+        { from: /template/g, to: fileName },
+        // { from: /Page/g, to: pageSuffix },
+        // { from: /page/g, to: pageSuffix.toLowerCase() },
+        // { from: /Controller/g, to: controllerSuffix },
+        // { from: /controller/g, to: controllerSuffix.toLowerCase() },
+        // { from: /views/g, to: viewFolder },
+        // { from: /Service/g, to: serviceSuffix },
+        // { from: /service/g, to: serviceSuffix.toLowerCase() },
+        // { from: /services/g, to: serviceFolder },
+        // { from: /Repository/g, to: repositorySuffix },
+        // { from: /repository/g, to: repositorySuffix.toLowerCase() },
+        // { from: /repositories/g, to: repositoryFolder },
+    ];
 
     replace.sync({
         files,
-        from: /Template/g,
-        to: className,
-        countMatches: true,
+        from: replacements.map(replacement => replacement.from),
+        to: replacements.map(replacement => replacement.to),
+        countMatches: true
     });
 
-    replace.sync({
-        files,
-        from: /template/g,
-        to: fileName,
-        countMatches: true,
-    });
 
     // Update app_routes.dart
     if (type === "view") {
-        modifyAppRoutes(path, fileName);
+        const moduleRoute = fileModuleName == fileName ? '' : '/' + fileModuleName;
+        modifyAppRoutes(path, moduleRoute, fileName);
     }
 }
 
-
-module.exports = {
-    addModule: addModule
-}
-
-function modifyAppRoutes(path, routeName) {
+function modifyAppRoutes(path, moduleRoute, pageRoute) {
     let appRoutesPath = `${path}lib/app/app_routes.dart`;
     var appRoutesData = fs.readFileSync(appRoutesPath, 'utf-8');
 
     if (!appRoutesData.includes('static')) {
-        fs.writeFileSync(appRoutesPath, `mixin AppRoutes {\n  static const ${routeName} = '/${routeName}';\n}\n`, 'utf-8');
+        fs.writeFileSync(appRoutesPath, `mixin AppRoutes {\n  static const ${pageRoute} = '${moduleRoute}/${pageRoute}';\n}\n`, 'utf-8');
     } else {
         var appRoutesLines = appRoutesData.split('\n');
 
@@ -232,7 +270,7 @@ function modifyAppRoutes(path, routeName) {
         }
 
         appRoutesLines.splice(index, 0,
-            `  static const ${routeName} = '/${routeName}';`
+            `  static const ${pageRoute} = '${moduleRoute}/${pageRoute}/';`
         );
         fs.writeFileSync(appRoutesPath, appRoutesLines.join('\n'), 'utf-8');
     }
@@ -250,9 +288,11 @@ function modifyModule(path, fileName, type) {
 
     // Add import and bind statements based on the type
     var importStatement, bindStatement;
+
     switch (type) {
         case 'view':
             importStatement = `import 'views/template/template_controller.dart';`;
+            importStatement += `\nimport 'views/template/template_page.dart';`;
             bindStatement = `    AutoBind.lazySingleton(TemplateController.new),`;
             break;
         case 'service':

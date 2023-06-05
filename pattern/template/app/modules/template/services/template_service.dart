@@ -1,8 +1,8 @@
 import 'package:flutter_modular/flutter_modular.dart';
 
 class TemplateService extends Disposable {
-  TemplateService(this._repository);
-  final TemplateRepository _repository;
+  // TemplateService(this._repository);
+  // final TemplateRepository _repository;
   
   //States
   //

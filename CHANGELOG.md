@@ -1,7 +1,14 @@
 # Change Log
 
-All notable changes to the "modular-generator" extension will be documented in this file.
+## Version 0.2.0
 
-## [Unreleased]
+- Added `[Modular Generator]: Install Modular`
+- Added `[Modular Generator]: Add Module`
+- Added `[Modular Generator]: Update Module`
+- Updated to `flutter_modular`:6.0.0-beta.2
+- Added `asp` latest stable release.
+- Min SDK set to Dart 3.0
 
-- Initial release
+## Version 0.1.0
+
+- Testing
