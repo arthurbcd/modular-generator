@@ -2,7 +2,7 @@
 const vscode = require('vscode')
 const replace = require('replace-in-file')
 const fs = require('fs')
-const utils = require('./utils.js')
+// const utils = require('./js')
 const install = require('./install.js');
 const path = require('path');
 
@@ -11,8 +11,28 @@ module.exports = {
     updateModule: updateModule
 }
 
+
+
+async function getPubspecPath() {
+    try {
+        const files = await vscode.workspace.findFiles('pubspec.yaml');
+        return files[0].path;
+    } catch (error) {
+        const action = await vscode.window.showWarningMessage(
+            'No project found. Install?',
+            { modal: true },
+            'Yes 🔥'
+        );
+        if (action === 'Yes 🔥') {
+            await install.install();
+            const files = await vscode.workspace.findFiles('pubspec.yaml');
+            return files[0].path;
+        }
+    }
+}
+
 async function getModules() {
-    var [pubspecPath] = await utils.getPubspecPath();
+    var pubspecPath = await getPubspecPath();
     let path = pubspecPath.replace("pubspec.yaml", "")
 
     const modulePaths = `${path}lib/app/modules/`;
@@ -24,6 +44,11 @@ async function getModules() {
         name: dirent.name,
         path: modulePaths + dirent.name
     }));
+
+    // modules.push({
+    //     name: 'app',
+    //     path: `${path}lib/app`
+    // });
 
     return modules;
 }
@@ -49,31 +74,32 @@ async function updateModule() {
 
     if (!validateInput(moduleName)) return;
 
-    await addModule(moduleName);
-
+    await addModule(moduleName, { update: true });
+    removeDuplicatedBinds(modulePath);
 }
 
-async function addModule(maybeModuleName) {
-    var [pubspecPath] = await utils.getPubspecPath()
+async function addModule(maybeModuleName, { update = false } = {}) {
+    var pubspecPath = await getPubspecPath()
 
     if (typeof pubspecPath === 'string' && pubspecPath.length > 0) {
 
         /// * Pick the module
         const moduleName = maybeModuleName ?? await vscode.window.showInputBox({
-            placeHolder: "e.g module name or module_name or ModuleName",
-            prompt: "Add a valid Module name.",
+            placeHolder: "name",
+            prompt: "Module name. Format: 'module name', 'module_name' or 'ModuleName'",
         });
 
         if (!validateInput(moduleName)) return;
 
-        await moveFile(null, moduleName, 'module');
+        await moveFile(null, moduleName, 'module', { update });
 
         /// * Generate the pages
         const pageNamesInput = await vscode.window.showInputBox({
-            placeHolder: "e.g login, register, ... (leave empty to skip)",
-            prompt: "Pages to add. If the Module and Page names are equal, the route will be '/', otherwise '/page_name'.",
+            placeHolder: "name1, name2, ... (leave empty to skip)",
+            prompt: "Pages to add.",
         });
 
+        if (pageNamesInput === undefined) return;
         if (pageNamesInput) {
             const pageNames = pageNamesInput.split(',').map(name => name.trim());
 
@@ -85,10 +111,11 @@ async function addModule(maybeModuleName) {
 
         /// * Generate the services
         const serviceNamesInput = await vscode.window.showInputBox({
-            placeHolder: "e.g server auth, google auth, ... (leave empty to skip)",
-            prompt: "Services to add. Please, separate by commas.",
+            placeHolder: "name1, name2, ... (leave empty to skip)",
+            prompt: "Services to add.",
         });
 
+        if (serviceNamesInput === undefined) return;
         if (serviceNamesInput) {
             const serviceNames = serviceNamesInput.split(',').map(name => name.trim());
 
@@ -100,10 +127,11 @@ async function addModule(maybeModuleName) {
 
         /// * Generate the repositories
         const repositoryNamesInput = await vscode.window.showInputBox({
-            placeHolder: "e.g server auth, ... (leave empty to skip)",
-            prompt: "Repositories to add. Please, separate by commas.",
+            placeHolder: "name1, name2, ... (leave empty to skip)",
+            prompt: "Repositories to add.",
         });
 
+        if (repositoryNamesInput === undefined) return;
         if (repositoryNamesInput) {
             const repositoryNames = repositoryNamesInput.split(',').map(name => name.trim());
 
@@ -112,19 +140,17 @@ async function addModule(maybeModuleName) {
                 await moveFile(moduleName, repositoryName, 'repository');
             }
         }
-
-        vscode.window.showInformationMessage('Module Generated 🔥')
-
     }
 }
 
+let modulePath;
 /**
  * @param {string} path
  * @param {string} projectName
  * @param {string} typeName
  * @param {string} type
  */
-async function moveFile(moduleName, typeName, type) {
+async function moveFile(moduleName, typeName, type, { update = false } = {}) {
     let extension
     vscode.extensions.all.forEach((e) => {
         if (e.id.includes("modular-generator")) {
@@ -135,7 +161,9 @@ async function moveFile(moduleName, typeName, type) {
     if (extension == null) {
         return
     }
-    var [pubspecPath] = await utils.getPubspecPath();
+    var pubspecPath = await getPubspecPath();
+
+
 
     let path = pubspecPath.replace("pubspec.yaml", "")
     var data = fs.readFileSync(pubspecPath, 'utf-8')
@@ -164,41 +192,92 @@ async function moveFile(moduleName, typeName, type) {
             function (w) { return w[0].toUpperCase() + w.slice(1).toLowerCase(); })
         .replace(/\s/g, '')
 
-    if (type === 'repository') {
-        await vscode.workspace.fs.copy(
-            vscode.Uri.parse(`${extension.extensionPath}/pattern/template/app/modules/template/repositories/template_repository.dart`),
-            vscode.Uri.parse(`${path}lib/app/modules/${fileModuleName}/repositories/${fileName}_repository.dart`),
-            { overwrite: true }
-        )
-    }
-    if (type === 'service') {
-        await vscode.workspace.fs.copy(
-            vscode.Uri.parse(`${extension.extensionPath}/pattern/template/app/modules/template/services/template_service.dart`),
-            vscode.Uri.parse(`${path}lib/app/modules/${fileModuleName}/services/${fileName}_service.dart`),
-            { overwrite: true }
-        )
-    }
-    if (type === 'view') {
-        await vscode.workspace.fs.copy(
-            vscode.Uri.parse(`${extension.extensionPath}/pattern/template/app/modules/template/views/template/template_page.dart`),
-            vscode.Uri.parse(`${path}lib/app/modules/${fileModuleName}/views/${fileName}/${fileName}_page.dart`),
-            { overwrite: true }
-        )
-        await vscode.workspace.fs.copy(
-            vscode.Uri.parse(`${extension.extensionPath}/pattern/template/app/modules/template/views/template/template_controller.dart`),
-            vscode.Uri.parse(`${path}lib/app/modules/${fileModuleName}/views/${fileName}/${fileName}_controller.dart`),
-            { overwrite: true }
-        )
-    }
-    if (type === 'module') {
-        await vscode.workspace.fs.copy(
-            vscode.Uri.parse(`${extension.extensionPath}/pattern/template/app/modules/template/template_module.dart`),
-            vscode.Uri.parse(`${path}lib/app/modules/${fileName}/${fileName}_module.dart`),
-            { overwrite: true }
-        )
+    modulePath = `${path}lib/app/modules/${fileModuleName}/${fileModuleName}_module.dart`;
+
+    //function to check if the file already exists
+    async function overwriteMessage(path, name) {
+        if (fs.existsSync(path)) {
+            const type = path.substring(path.lastIndexOf('_') + 1);
+
+            //Prompts the user to overwrite the file
+            let options = ['Yes', 'No'];
+
+            const overwrite = await vscode.window.showQuickPick(options, {
+                placeHolder: `The file ${name}_${type} already exists. Do you want to overwrite it?`,
+            });
+            if (overwrite === undefined) throw new Error('User canceled the overwrite');
+
+            return overwrite === 'Yes';
+        } else {
+            return true;
+        }
     }
 
-    const modulePath = `${path}lib/app/modules/${fileModuleName}/${fileModuleName}_module.dart`;
+
+    try {
+        if (type === 'repository') {
+            const movePath = `${path}lib/app/modules/${fileModuleName}/repositories/${fileName}_repository.dart`;
+            if (await overwriteMessage(movePath, fileName)) {
+
+                await vscode.workspace.fs.copy(
+                    vscode.Uri.parse(`${extension.extensionPath}/pattern/template/app/modules/template/repositories/template_repository.dart`),
+                    vscode.Uri.parse(movePath),
+                    { overwrite: true }
+                )
+            }
+        }
+        if (type === 'service') {
+            const movePath = `${path}lib/app/modules/${fileModuleName}/services/${fileName}_service.dart`;
+            if (await overwriteMessage(movePath, fileName)) {
+
+                await vscode.workspace.fs.copy(
+                    vscode.Uri.parse(`${extension.extensionPath}/pattern/template/app/modules/template/services/template_service.dart`),
+                    vscode.Uri.parse(movePath),
+                    { overwrite: true }
+                )
+            }
+        }
+        if (type === 'view') {
+            const movePagePath = `${path}lib/app/modules/${fileModuleName}/views/${fileName}/${fileName}_page.dart`;
+            if (await overwriteMessage(movePagePath, fileName)) {
+                await vscode.workspace.fs.copy(
+                    vscode.Uri.parse(`${extension.extensionPath}/pattern/template/app/modules/template/views/template/template_page.dart`),
+                    vscode.Uri.parse(movePagePath),
+                    { overwrite: true }
+                )
+            }
+            const moveRepPath = `${path}lib/app/modules/${fileModuleName}/views/${fileName}/${fileName}_controller.dart`;
+            if (await overwriteMessage(moveRepPath, fileName)) {
+                await vscode.workspace.fs.copy(
+                    vscode.Uri.parse(`${extension.extensionPath}/pattern/template/app/modules/template/views/template/template_controller.dart`),
+                    vscode.Uri.parse(moveRepPath),
+                    { overwrite: true }
+                )
+            }
+        }
+    } catch (error) {
+        return;
+    }
+
+    try {
+        if (type === 'module') {
+            const movePath = `${path}lib/app/modules/${fileName}/${fileName}_module.dart`;
+
+            if (update) return;
+            if (!(await overwriteMessage(movePath, fileName))) throw new Error('User canceled the overwrite');
+
+        await vscode.workspace.fs.copy(
+            vscode.Uri.parse(`${extension.extensionPath}/pattern/template/app/modules/template/template_module.dart`),
+            vscode.Uri.parse(movePath),
+            { overwrite: true }
+        )
+    }
+    } catch (error) {
+        if (error.message === 'User canceled the overwrite') throw error;
+        // vscode.window.showErrorMessage(error)
+        // vscode.window.showInformationMessage(error.message)
+    }
+
     const viewPath = `${path}lib/app/modules/${fileModuleName}/views/${fileName}/*.dart`;
     const servicePath = `${path}lib/app/modules/${fileModuleName}/services/*.dart`;
     const repositoryPath = `${path}lib/app/modules/${fileModuleName}/repositories/*.dart`;
@@ -248,33 +327,97 @@ async function moveFile(moduleName, typeName, type) {
     // Update app_routes.dart
     if (type === "view") {
         const moduleRoute = fileModuleName == fileName ? '' : '/' + fileModuleName;
-        modifyAppRoutes(path, moduleRoute, fileName);
+        await modifyAppRoutes(path, moduleRoute, fileName);
     }
+
+    // if (type !== 'module') {
+    //     removeDuplicatedBinds(modulePath);
+    // }
 }
 
-function modifyAppRoutes(path, moduleRoute, pageRoute) {
-    let appRoutesPath = `${path}lib/app/app_routes.dart`;
-    var appRoutesData = fs.readFileSync(appRoutesPath, 'utf-8');
+function removeDuplicatedBinds(modulePath) {
+    let lines = fs.readFileSync(modulePath, 'utf-8').split('\n');
 
-    if (!appRoutesData.includes('static')) {
-        fs.writeFileSync(appRoutesPath, `mixin AppRoutes {\n  static const ${pageRoute} = '${moduleRoute}/${pageRoute}';\n}\n`, 'utf-8');
-    } else {
-        var appRoutesLines = appRoutesData.split('\n');
+    let uniqueLines = [];
+    let visitedLines = new Set();
 
-        var index = 0;
-        for (let i = 0; i < appRoutesLines.length; i++) {
-            const element = appRoutesLines[i];
-            if (element.includes('}')) {
-                index = i;
-            }
+    for (let line of lines) {
+        // Check for lines that match the criteria
+        if (((line.includes('Bind') || line.includes('Route')) && line.includes(',')) || line.includes('import')) {
+            // If it is a duplicate, skip it
+            if (visitedLines.has(line)) continue;
+
+            visitedLines.add(line);
         }
 
-        appRoutesLines.splice(index, 0,
-            `  static const ${pageRoute} = '${moduleRoute}/${pageRoute}/';`
-        );
-        fs.writeFileSync(appRoutesPath, appRoutesLines.join('\n'), 'utf-8');
+        uniqueLines.push(line);
     }
+
+    fs.writeFileSync(modulePath, uniqueLines.join('\n'), 'utf-8');
 }
+
+async function modifyAppRoutes(path, moduleRoute, pageRoute) {
+    let appRoutesPath = `${path}lib/app/app_routes.dart`;
+    var appRoutesLines = fs.readFileSync(appRoutesPath, 'utf-8').split('\n');
+
+    const route = `  static const ${pageRoute} = '${moduleRoute}/${pageRoute}';`;
+
+    // If the file doesn't contain 'static', it's empty
+    if (!appRoutesLines.some(line => line.includes('static'))) {
+        appRoutesLines = [`mixin AppRoutes {`, `${route}`, `}`, `}`];
+    } else {
+        // Find the line with the existing route, or where the closing braces are if the route doesn't exist
+        let index = appRoutesLines.findIndex(line => line.includes(`static const ${pageRoute}`) || line.includes('}'));
+
+        if (appRoutesLines[index].includes(`static const ${pageRoute}`)) {
+            //Prompts the user to overwrite the file
+            let options = ['Yes', 'No'];
+
+            const overwrite = await vscode.window.showQuickPick(options, {
+                placeHolder: `The route '${pageRoute}' already exists: '${moduleRoute}/${pageRoute}'. Do you want to overwrite it?`,
+            });
+            if (overwrite === 'Yes') {
+                // Replace the existing route
+                appRoutesLines[index] = route;
+            } else {
+                return;
+            }
+
+        } else {
+            // Add the new route before the closing braces
+            appRoutesLines.splice(index, 0, route);
+        }
+    }
+
+    fs.writeFileSync(appRoutesPath, appRoutesLines.join('\n'), 'utf-8');
+}
+// function modifyAppRoutes(path, moduleRoute, pageRoute) {
+//     let appRoutesPath = `${path}lib/app/app_routes.dart`;
+//     var appRoutesData = fs.readFileSync(appRoutesPath, 'utf-8');
+
+//     const route = `static const ${pageRoute} = '${moduleRoute}/${pageRoute}`;
+
+
+
+//     if (!appRoutesData.includes('static')) {
+//         fs.writeFileSync(appRoutesPath, `mixin AppRoutes {\n  ${route}';\n}\n`, 'utf-8');
+//     } else {
+//         var appRoutesLines = appRoutesData.split('\n');
+
+//         var index = 0;
+//         for (let i = 0; i < appRoutesLines.length; i++) {
+//             const element = appRoutesLines[i];
+//             if (element.includes('}')) {
+//                 index = i;
+//             }
+//         }
+
+//         appRoutesLines.splice(index, 0,
+//             `  ${route}/';`
+//         );
+//         fs.writeFileSync(appRoutesPath, appRoutesLines.join('\n'), 'utf-8');
+//     }
+// }
 
 function modifyModule(path, fileName, type) {
 

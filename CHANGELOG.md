@@ -1,5 +1,11 @@
 # Change Log
 
+## Version 0.2.1
+
+- Improved installing
+- Added several overwriting alerts
+- Improved error handling
+
 ## Version 0.2.0
 
 - Added `[Modular Generator]: Install Modular`
