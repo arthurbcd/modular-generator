@@ -360,7 +360,7 @@ async function modifyAppRoutes(path, moduleRoute, pageRoute) {
     let appRoutesPath = `${path}lib/app/app_routes.dart`;
     var appRoutesLines = fs.readFileSync(appRoutesPath, 'utf-8').split('\n');
 
-    const route = `  static const ${pageRoute} = '${moduleRoute}/${pageRoute}';`;
+    const route = `  static const ${pageRoute} = '${moduleRoute}/${pageRoute}/';`;
 
     // If the file doesn't contain 'static', it's empty
     if (!appRoutesLines.some(line => line.includes('static'))) {
@@ -391,33 +391,6 @@ async function modifyAppRoutes(path, moduleRoute, pageRoute) {
 
     fs.writeFileSync(appRoutesPath, appRoutesLines.join('\n'), 'utf-8');
 }
-// function modifyAppRoutes(path, moduleRoute, pageRoute) {
-//     let appRoutesPath = `${path}lib/app/app_routes.dart`;
-//     var appRoutesData = fs.readFileSync(appRoutesPath, 'utf-8');
-
-//     const route = `static const ${pageRoute} = '${moduleRoute}/${pageRoute}`;
-
-
-
-//     if (!appRoutesData.includes('static')) {
-//         fs.writeFileSync(appRoutesPath, `mixin AppRoutes {\n  ${route}';\n}\n`, 'utf-8');
-//     } else {
-//         var appRoutesLines = appRoutesData.split('\n');
-
-//         var index = 0;
-//         for (let i = 0; i < appRoutesLines.length; i++) {
-//             const element = appRoutesLines[i];
-//             if (element.includes('}')) {
-//                 index = i;
-//             }
-//         }
-
-//         appRoutesLines.splice(index, 0,
-//             `  ${route}/';`
-//         );
-//         fs.writeFileSync(appRoutesPath, appRoutesLines.join('\n'), 'utf-8');
-//     }
-// }
 
 function modifyModule(path, fileName, type) {
 

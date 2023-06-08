@@ -1,5 +1,9 @@
 # Change Log
 
+## Version 0.2.2
+
+- Added `/` at the end of AppRoutes paths.
+
 ## Version 0.2.1
 
 - Improved installing
