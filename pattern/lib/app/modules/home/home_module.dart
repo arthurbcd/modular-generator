@@ -1,15 +1,13 @@
 import 'package:flutter_modular/flutter_modular.dart';
-import 'views/home/home_controller.dart';
-import 'views/home/home_page.dart';
+
+import 'views/home_page.dart';
 
 class HomeModule extends Module {
   @override
-  final List<Bind> binds = [
-    AutoBind.lazySingleton(HomeController.new),
-  ];
+  void binds(Injector i) {}
 
   @override
-  final List<ModularRoute> routes = [
-    ChildRoute('/', child: (_, args) => const HomePage()),
-  ];
+  void routes(RouteManager r) {
+    r.child('/', child: (_) => const HomePage());
+  }
 }

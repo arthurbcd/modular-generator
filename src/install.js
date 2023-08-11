@@ -4,8 +4,8 @@ const replace = require('replace-in-file')
 const fs = require('fs')
 const utils = require('./utils.js')
 var cp = require('child_process')
-const util = require('util');
-const exec = util.promisify(cp.exec);
+// const util = require('util');
+// const exec = util.promisify(cp.exec);
 
 async function install() {
     var pubspecPath = await utils.createPubspecPath();
@@ -49,7 +49,7 @@ async function install() {
         var projectName = lines[0].replace("name: ", "")
         moveFile(path, projectName)
 
-        cp.exec(`cd ${path} && flutter pub add asp flutter_modular:6.0.0-beta.2`);
+        cp.exec(`cd ${path} && flutter pub add flutter_modular`);
         cp.exec(`cd ${path} && dart pub get`)
 
         await new Promise(resolve => setTimeout(resolve, 10000));
@@ -60,17 +60,17 @@ async function install() {
     else { return }
 }
 
-function execPromise(command) {
-    return new Promise(function (resolve, reject) {
-        cp.exec(command, function (error, stdout, stderr) {
-            if (error) {
-                reject(error);
-                return;
-            }
-            resolve({ stdout, stderr });
-        });
-    });
-}
+// function execPromise(command) {
+//     return new Promise(function (resolve, reject) {
+//         cp.exec(command, function (error, stdout, stderr) {
+//             if (error) {
+//                 reject(error);
+//                 return;
+//             }
+//             resolve({ stdout, stderr });
+//         });
+//     });
+// }
 /**
  * @param {string} path
  * @param {string} projectName

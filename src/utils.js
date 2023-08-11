@@ -1,5 +1,5 @@
 const vscode = require('vscode')
-var cp = require('child_process')
+// var cp = require('child_process')
 
 // const install = require('./install.js')
 

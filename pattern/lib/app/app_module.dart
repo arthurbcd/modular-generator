@@ -1,22 +1,13 @@
 import 'package:flutter_modular/flutter_modular.dart';
 
-import 'modules/home/home_module.dart';
+import 'modules/home/views/home_page.dart';
 
 class AppModule extends Module {
   @override
-  final List<Bind> binds = [
-    // * Sources
-    // todo: implement
-
-    // * Repositories
-    // todo: implement
-
-    // * Services
-    // todo: implement
-  ];
+  void binds(Injector i) {}
 
   @override
-  final List<ModuleRoute> routes = [
-    ModuleRoute('/home', module: HomeModule()),
-  ];
+  void routes(RouteManager r) {
+    r.child('/', child: (_) => const HomePage());
+  }
 }

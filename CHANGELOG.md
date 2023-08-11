@@ -1,5 +1,12 @@
 # Change Log
 
+## Version 0.3
+
+- Updated to `flutter_modular`:6.0.3
+- Now Bind are completely custom, pick names then their suffixes.
+- Removed all opinionated configs.
+- Cleaner install
+
 ## Version 0.2.2
 
 - Added `/` at the end of AppRoutes paths.

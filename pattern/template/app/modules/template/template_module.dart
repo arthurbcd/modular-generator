@@ -2,8 +2,8 @@ import 'package:flutter_modular/flutter_modular.dart';
 
 class TemplateModule extends Module {
   @override
-  final List<Bind> binds = [];
+  void binds(Injector i) {}
 
   @override
-  final List<ModularRoute> routes = [];
+  void routes(RouteManager r) {}
 }

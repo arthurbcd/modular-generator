@@ -4,7 +4,7 @@ const replace = require('replace-in-file')
 const fs = require('fs')
 // const utils = require('./js')
 const install = require('./install.js');
-const path = require('path');
+// const path = require('path');
 
 module.exports = {
     addModule: addModule,
@@ -109,41 +109,49 @@ async function addModule(maybeModuleName, { update = false } = {}) {
             }
         }
 
-        /// * Generate the services
-        const serviceNamesInput = await vscode.window.showInputBox({
+        /// * Generate the binds
+        const bindNamesInput = await vscode.window.showInputBox({
             placeHolder: "name1, name2, ... (leave empty to skip)",
-            prompt: "Services to add.",
+            prompt: "Binds to add.",
         });
 
-        if (serviceNamesInput === undefined) return;
-        if (serviceNamesInput) {
-            const serviceNames = serviceNamesInput.split(',').map(name => name.trim());
+        if (bindNamesInput === undefined) return;
+        if (bindNamesInput) {
+            const bindNames = bindNamesInput.split(',').map(name => name.trim());
 
-            for (const serviceName of serviceNames) {
-                if (!validateInput(serviceName)) continue;
-                await moveFile(moduleName, serviceName, 'service');
+            for (const bindName of bindNames) {
+                if (!validateInput(bindName)) continue;
+                await moveFile(moduleName, bindName, 'bind');
             }
         }
 
-        /// * Generate the repositories
-        const repositoryNamesInput = await vscode.window.showInputBox({
-            placeHolder: "name1, name2, ... (leave empty to skip)",
-            prompt: "Repositories to add.",
-        });
-
-        if (repositoryNamesInput === undefined) return;
-        if (repositoryNamesInput) {
-            const repositoryNames = repositoryNamesInput.split(',').map(name => name.trim());
-
-            for (const repositoryName of repositoryNames) {
-                if (!validateInput(repositoryName)) continue;
-                await moveFile(moduleName, repositoryName, 'repository');
-            }
-        }
     }
 }
 
 let modulePath;
+let bindSuffix = 'Bind';
+let bindFileName = 'bind';
+
+function getBindFolder() {
+    // If bindFileName ends with 'y' and is preceded by a non-vowel, replace it with 'ies'
+    if (bindFileName.match(/[^aeiou]y$/)) {
+        return bindFileName.slice(0, -1) + 'ies';
+    }
+    // If bindFileName ends with 's', 'x', 'z', 'ch', or 'sh', add 'es' to the end
+    else if (bindFileName.match(/(s|x|z|ch|sh)$/)) {
+        return bindFileName + 'es';
+    }
+    // If bindFileName ends with 'f' or 'fe', replace it with 'ves'
+    else if (bindFileName.match(/f$/)) {
+        return bindFileName.slice(0, -1) + 'ves';
+    }
+    else if (bindFileName.match(/fe$/)) {
+        return bindFileName.slice(0, -2) + 'ves';
+    }
+    // Otherwise, just add an 's' to the end
+    return bindFileName + 's';
+}
+
 /**
  * @param {string} path
  * @param {string} projectName
@@ -215,42 +223,43 @@ async function moveFile(moduleName, typeName, type, { update = false } = {}) {
 
 
     try {
-        if (type === 'repository') {
-            const movePath = `${path}lib/app/modules/${fileModuleName}/repositories/${fileName}_repository.dart`;
-            if (await overwriteMessage(movePath, fileName)) {
 
-                await vscode.workspace.fs.copy(
-                    vscode.Uri.parse(`${extension.extensionPath}/pattern/template/app/modules/template/repositories/template_repository.dart`),
-                    vscode.Uri.parse(movePath),
-                    { overwrite: true }
-                )
+        if (type === 'bind') {
+
+            const suffixes = ['Repository', 'Service', 'Store', 'Bloc', 'Controller'];
+
+            suffixes.push('[Set custom suffix]');
+
+            bindSuffix = await vscode.window.showQuickPick(suffixes, {
+                placeHolder: `Pick a suffix for '${className}'`,
+            });
+
+            if (bindSuffix === '[Set custom suffix]') {
+                bindSuffix = await vscode.window.showInputBox({
+                    placeHolder: "Custom suffix",
+                    prompt: "Type a custom suffix",
+                });
             }
-        }
-        if (type === 'service') {
-            const movePath = `${path}lib/app/modules/${fileModuleName}/services/${fileName}_service.dart`;
+
+            bindFileName = `${bindSuffix.toLowerCase()}`;
+
+
+            const movePath = `${path}lib/app/modules/${fileModuleName}/${getBindFolder()}/${fileName}_${bindFileName}.dart`;
             if (await overwriteMessage(movePath, fileName)) {
 
                 await vscode.workspace.fs.copy(
-                    vscode.Uri.parse(`${extension.extensionPath}/pattern/template/app/modules/template/services/template_service.dart`),
+                    vscode.Uri.parse(`${extension.extensionPath}/pattern/template/app/modules/template/suffixs/template_suffix.dart`),
                     vscode.Uri.parse(movePath),
                     { overwrite: true }
                 )
             }
         }
         if (type === 'view') {
-            const movePagePath = `${path}lib/app/modules/${fileModuleName}/views/${fileName}/${fileName}_page.dart`;
+            const movePagePath = `${path}lib/app/modules/${fileModuleName}/views/${fileName}_page.dart`;
             if (await overwriteMessage(movePagePath, fileName)) {
                 await vscode.workspace.fs.copy(
-                    vscode.Uri.parse(`${extension.extensionPath}/pattern/template/app/modules/template/views/template/template_page.dart`),
+                    vscode.Uri.parse(`${extension.extensionPath}/pattern/template/app/modules/template/views/template_page.dart`),
                     vscode.Uri.parse(movePagePath),
-                    { overwrite: true }
-                )
-            }
-            const moveRepPath = `${path}lib/app/modules/${fileModuleName}/views/${fileName}/${fileName}_controller.dart`;
-            if (await overwriteMessage(moveRepPath, fileName)) {
-                await vscode.workspace.fs.copy(
-                    vscode.Uri.parse(`${extension.extensionPath}/pattern/template/app/modules/template/views/template/template_controller.dart`),
-                    vscode.Uri.parse(moveRepPath),
                     { overwrite: true }
                 )
             }
@@ -278,15 +287,14 @@ async function moveFile(moduleName, typeName, type, { update = false } = {}) {
         // vscode.window.showInformationMessage(error.message)
     }
 
-    const viewPath = `${path}lib/app/modules/${fileModuleName}/views/${fileName}/*.dart`;
-    const servicePath = `${path}lib/app/modules/${fileModuleName}/services/*.dart`;
-    const repositoryPath = `${path}lib/app/modules/${fileModuleName}/repositories/*.dart`;
+    const viewPath = `${path}lib/app/modules/${fileModuleName}/views/*.dart`;
+    const bindPath = `${path}lib/app/modules/${fileModuleName}/${getBindFolder()}/*.dart`;
 
     var files = [modulePath];
 
     if (type === 'view') files.push(viewPath);
-    if (type === 'service') files.push(servicePath);
-    if (type === 'repository') files.push(repositoryPath);
+    if (type === 'bind') files.push(bindPath);
+    // if (type === 'repository') files.push(repositoryPath);
 
     /// Add imports, binds and routes as module templates
     modifyModule(modulePath, fileName, type);
@@ -298,22 +306,20 @@ async function moveFile(moduleName, typeName, type, { update = false } = {}) {
     // const serviceFolder = vscode.workspace.getConfiguration().get('modular-generator.serviceFolder');
     // const repositorySuffix = vscode.workspace.getConfiguration().get('modular-generator.repositorySuffix');
     // const repositoryFolder = vscode.workspace.getConfiguration().get('modular-generator.repositoryFolder');
+    console.log(bindSuffix);
 
     const replacements = [
         { from: /modular_generator/g, to: projectName },
         { from: /Template/g, to: className },
         { from: /template/g, to: fileName },
-        // { from: /Page/g, to: pageSuffix },
-        // { from: /page/g, to: pageSuffix.toLowerCase() },
-        // { from: /Controller/g, to: controllerSuffix },
-        // { from: /controller/g, to: controllerSuffix.toLowerCase() },
-        // { from: /views/g, to: viewFolder },
-        // { from: /Service/g, to: serviceSuffix },
-        // { from: /service/g, to: serviceSuffix.toLowerCase() },
-        // { from: /services/g, to: serviceFolder },
-        // { from: /Repository/g, to: repositorySuffix },
-        // { from: /repository/g, to: repositorySuffix.toLowerCase() },
-        // { from: /repositories/g, to: repositoryFolder },
+        { from: /Suffix/g, to: bindSuffix },
+        { from: /suffix/g, to: `${bindSuffix.toLowerCase()}` },
+
+        //Pluralization fixes
+        // { from: /([^aeiou])y/g, to: '$1ies' },
+        // { from: /([^aeiou])o/g, to: '$1oes' },
+        // { from: /([aeo]l)f/g, to: '$1ves' },
+        // { from: /([aeo]l)fe/g, to: '$1ves' }
     ];
 
     replace.sync({
@@ -403,58 +409,62 @@ function modifyModule(path, fileName, type) {
     var lastImportIndex = templateModuleLines.lastIndexOf(line => line.includes('import'));
 
     // Add import and bind statements based on the type
-    var importStatement, bindStatement;
+    var importStatement, bindStatement = '';
 
     switch (type) {
         case 'view':
-            importStatement = `import 'views/template/template_controller.dart';`;
-            importStatement += `\nimport 'views/template/template_page.dart';`;
-            bindStatement = `    AutoBind.lazySingleton(TemplateController.new),`;
+            importStatement = `import 'views/template_page.dart';`;
+            // importStatement += `\nimport 'views/template/template_page.dart';`;
+            // bindStatement = `    i.addLazySingleton(TemplateController.new);`;
             break;
-        case 'service':
-            importStatement = `import 'services/template_service.dart';`;
-            bindStatement = `    AutoBind.lazySingleton(TemplateService.new),`;
+        case 'bind':
+            importStatement = `import '${getBindFolder()}/template_suffix.dart';`;
+            bindStatement = `    i.addLazySingleton(TemplateSuffix.new);`;
             break;
-        case 'repository':
-            importStatement = `import 'repositories/template_repository.dart';`;
-            bindStatement = `    AutoBind.lazySingleton(TemplateRepository.new),`;
-            break;
+        // case 'repository':
+        //     importStatement = `import 'repositories/template_repository.dart';`;
+        //     bindStatement = `    AutoBind.lazySingleton(TemplateRepository.new);`;
+        //     break;
     }
 
     templateModuleLines.splice(lastImportIndex + 1, 0, importStatement);
 
     // If the opening and closing brackets are on the same line, break the line
     function openBrackets(index) {
-        if (templateModuleLines[index].includes('];')) {
-            templateModuleLines.splice(index + 1, 0, '  ];');
-            templateModuleLines[index] = templateModuleLines[index].replace('];', '');
+        if (templateModuleLines[index].includes('}')) {
+            templateModuleLines.splice(index + 1, 0, '  }');
+            templateModuleLines[index] = templateModuleLines[index].replace('}', '');
         }
     }
 
-    // Find the index of the closing bracket for the binds list
-    var bindIndex = templateModuleLines.findIndex(line => line.includes('binds = ['));
-    openBrackets(bindIndex);
-    var bindEndIndex = bindIndex;
+    if (type !== 'view') {
 
-    for (let i = bindIndex; i < templateModuleLines.length; i++) {
-        if (templateModuleLines[i].includes('];')) {
-            bindEndIndex = i;
-            break;
+        // Find the index of the closing bracket for the binds list
+        var bindIndex = templateModuleLines.findIndex(line => line.includes('void binds('));
+        openBrackets(bindIndex);
+        var bindEndIndex = bindIndex;
+
+        for (let i = bindIndex; i < templateModuleLines.length; i++) {
+            if (templateModuleLines[i].includes('}')) {
+                bindEndIndex = i;
+                break;
+            }
         }
-    }
 
-    // Add the new Bind line before the closing bracket of the binds list
-    templateModuleLines.splice(bindEndIndex, 0, bindStatement);
+        // Add the new Bind line before the closing bracket of the binds list
+        templateModuleLines.splice(bindEndIndex, 0, bindStatement);
+
+    }
 
     // If type is 'view', add the routing info
     if (type === 'view') {
         // Find the index of the closing bracket for the routes list
-        var routesIndex = templateModuleLines.findIndex(line => line.includes('routes = ['));
+        var routesIndex = templateModuleLines.findIndex(line => line.includes('void routes('));
         openBrackets(routesIndex);
         var routesEndIndex = routesIndex;
 
         for (let i = routesIndex; i < templateModuleLines.length; i++) {
-            if (templateModuleLines[i].includes('];')) {
+            if (templateModuleLines[i].includes('}')) {
                 routesEndIndex = i;
                 break;
             }
@@ -464,7 +474,7 @@ function modifyModule(path, fileName, type) {
 
         // Add the new ChildRoute line before the closing bracket of the routes list
         templateModuleLines.splice(routesEndIndex, 0,
-            `    ChildRoute('/${routeName}', child: (_, args) => const TemplatePage()),`
+            `    r.child('/${routeName}', child: (_) => const TemplatePage());`
         );
     }
 
