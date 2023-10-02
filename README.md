@@ -16,12 +16,8 @@ lib/
 └─ app/
    ├─ module/
    │  └─ {module_name}/
-   │     ├─ repositories/
-   │     ├─ services/
    │     ├─ views/
-   │     │  └─ {view_name}/
-   │     │     ├─ {view_name}_controller.dart
-   │     │     └─ {view_name}_page.dart
+   │     │   └─ {view_name}_page.dart
    │     │
    │     └─ {module_name}_module.dart
    │
@@ -30,88 +26,29 @@ lib/
    └─ app_widget.dart
 ```
 
-### Add Module
+### Add/Update Module
 
-Our **Add Module** feature brings a set of automated procedures for component generation:
+Choose a module or create one and follow the prompts to update the binds and routes.
 
-- **Add View**: Modular Generator automatically generates Page, Controller, and binds them together with ChildRoute. Also integrates it into your `AppRoutes`.
-- **Add Service**: Automate creation and binding of services, eliminating manual entry.
-- **Add Repository**: Automate creation and binding of repositories, eliminating manual entry.
+- Either `bind` or `page` prompt will ask you a list of names (without suffix!), separate each name with ','. Ex: 'user, auth'.
 
-By simplifying these integral procedures, Modular Generator lets you concentrate on what's crucial - delivering high-quality code.
+- All the pages will be generated with the Suffix 'Page'. Aditionally. The route path will automatically be added in the app_routes.dart 🥳.
 
-### Update Module
+- All the binds will be generated with the choosen Suffix (can be custom).
 
-Choose a module and follow the prompts to update the Moduele, with View, Service, or Repository updates.
+Obs: There are no templates. Just empty classes for binds and a StatelessWidget for page.
 
 ---
 
-## Philosophy
-
-With the focus on modular design, Modular Generator encourages a more manageable folder structure. The Controller, Page, and Widget components are tied together logically rather than strewn about in a flat structure. Over time, this approach significantly reduces cognitive overhead and prevents confusion, fostering long-term codebase maintenance and comprehensibility.
-
-Modular Generator promotes a parallel module structure. There are no nested submodules within another module, mitigating confusion and ensuring each module remains self-contained and independent.
-
-Having experimented with various project structures, like ModuleRoutes and WidgetModule for Page/Controller, we found this strategy to be the most effective. It promotes transparency and ease of access by avoiding hidden modules and consolidating all dependencies into a singular, accessible location.
-
-An example of the envisioned structure is as follows:
-
-```dart
-class AuthModule extends Module {
-  @override
-  final List<Bind> binds = [
-    // * Repositories
-    AutoBind.lazySingleton(ServerAuthRepository.new),
-
-    // * Services
-    AutoBind.lazySingleton(ServerAuthService.new),
-    AutoBind.lazySingleton(GoogleAuthService.new),
-    AutoBind.lazySingleton(FacebookAuthService.new),
-
-    // * Controllers
-    AutoBind.lazySingleton(LoginController.new),
-    AutoBind.lazySingleton(RegisterController.new),
-  ];
-
-  @override
-  final List<ModularRoute> routes = [
-    ChildRoute('/login/', child: (_, args) => const LoginPage()),
-    ChildRoute('/register/', child: (_, args) => const RegisterPage()),
-  ];
-}
-```
-
-Which would look like this:
-
-```txt
-└─ auth/
-   ├─ repositories/
-   ├─ services/
-   ├─ views/
-   │  ├─ login/
-   │  │  ├─ login_controller.dart
-   │  │  └─ login_page.dart
-   │  └─ register/
-   │     ├─ register_controller.dart
-   │     └─ register_page.dart
-   │
-   └─ auth_module.dart
-```
-
 ## Continuous Development
 
-The Modular Generator is under active development, with plans to introduce more customization options while respecting our fundamental principles.
+The Modular Generator is under active development, with plans to introduce more customization options:
 
-- Custom Suffix and Folder Names
+- Custom Suffix and Folder Names ✅
 - Custom Interfaces
 - Remove a Module
 - Inserting Module as ModuleRoute
-
-You might notice the absence of shared/core folders or models in the module structure we provide. This isn't an oversight, but a conscious decision.
-
-While these components are indeed vital to any project, we believe that the management of these elements should be left to the developer's discretion. The Modular Generator extension does not dictate your project's overall architecture. Instead, it focuses on automating the aspects related to module generation and management.
-
-This approach allows you to leverage the benefits of the Modular Generator while retaining complete control over the organization of your core and shared components.
+- Custom Template defined by path + suffix
 
 ---
 
